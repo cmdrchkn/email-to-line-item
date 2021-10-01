@@ -13,7 +13,7 @@ DISALLOWED_CHARS_PATTERN = re.compile(r'["]')
 RESTAURANT_NAME_PATTERN = re.compile(
     r'(Your order from (.+?) is +being +prepared|Thanks for your (.+?) order)')
 DATE_PATTERN = re.compile(
-    r'Grubhub <orders@eat.grubhub.com> + (Mon|Tues|Wed|Thu|Fri|Sat|Sun), ((Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec).+?) at \d')
+    r'Grubhub +<orders@eat.grubhub.com> +(Mon|Tue|Wed|Thu|Fri|Sat|Sun), ((Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec).+?) +at +\d')
 LINE_ITEM_PATTERN = re.compile(r'\s*(\d)\s+([A-Za-z &\-*.]+)\s+\$(\d+\.\d+)$')
 FEE_ITEM_PATTERN = re.compile(r'(Delivery +fee|Sales +tax|Service +fee|Tip)\s+\$(\d+\.\d+)$')
 
