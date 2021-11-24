@@ -11,29 +11,42 @@ PDF_TO_TEXT_ARGS = ['-layout', '-table', '-nopgbrk', '-bom']
 EXTRA_WHITESPACE_PATTERN = re.compile(r'\s{2,}')
 DISALLOWED_CHARS_PATTERN = re.compile(r'["]')
 RESTAURANT_NAME_PATTERN = re.compile(
-    r'(Your order from (.+?) is +being +prepared|Thanks for your (.+?) order)')
+    r'(Your order from (.+?) is +being +prepared|Thanks for your (.+?) order)'
+)
 DATE_PATTERN = re.compile(
-    r'Grubhub +<orders@eat.grubhub.com> +(Mon|Tue|Wed|Thu|Fri|Sat|Sun), ((Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec).+?) +at +\d')
-LINE_ITEM_PATTERN = re.compile(r'\s*(\d)\s+([A-Za-z &\-*.]+)\s+\$(\d+\.\d+)$')
-FEE_ITEM_PATTERN = re.compile(r'(Delivery +fee|Sales +tax|Service +fee|Tip)\s+\$(\d+\.\d+)$')
+    r'Grubhub +<orders@eat.grubhub.com> +(Mon|Tue|Wed|Thu|Fri|Sat|Sun), ((Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec).+?) +at +\d'
+)
+LINE_ITEM_PATTERN = re.compile(r'\s*(\d)\s+([A-Za-z &\-*."\',()]+)\s+\$(\d+\.\d+)$')
+FEE_ITEM_PATTERN = re.compile(
+    r'(Delivery +fee|Sales +tax|Service +fee|Tip)\s+\$(\d+\.\d+)$'
+)
 
 
 # -- Main -- #
 def main():
+    source_dir = sys.argv[1]
 
-    if os.path.isdir(sys.argv[1]):
-        convert_pdfs(sys.argv[1])
+    if os.path.isdir(source_dir):
+        if source_dir.endswith('\\') or source_dir.endswith('/'):
+            source_dir = source_dir[0:-1]
+
+        print('-- Converting PDFs in "{}" to Text'.format(source_dir))
+        convert_pdfs(source_dir)
 
         all_data_rows = []
-        for thing in os.listdir(sys.argv[1]):
+        for thing in os.listdir(source_dir):
             if thing.lower().endswith('.txt'):
-                # print()
-                all_data_rows.extend(parse_text(os.path.join(sys.argv[1], thing)))
-        
-        if all_data_rows:
-            export_csv(os.path.dirname(sys.argv[1]) + '.csv', ['"Restaurant","Item","Category","Order Date","Purchased By"'] + all_data_rows)
+                print('-- Parsing text for "{}"'.format(thing))
+                all_data_rows.extend(parse_text(
+                    os.path.join(source_dir, thing)))
 
-    return
+        if all_data_rows:
+            output_csv = source_dir + '.csv'
+            print('-- Exporting to CSV "{}"'.format(output_csv))
+            export_csv(
+                output_csv,
+                ['"Restaurant","Item","Category","Order Date","Price","Purchased By"'] + all_data_rows
+            )
 
 
 def clean_text(some_string):
@@ -45,7 +58,7 @@ def clean_text(some_string):
 
 
 def parse_text(some_text_path):
-    # print('\t>' + some_text_path) # DEBUG
+    debug = True
     data_rows = []
     with open(some_text_path, 'r') as txtfile:
         restaurant_name = None
@@ -75,7 +88,8 @@ def parse_text(some_text_path):
                         is_line_item.group(3),
                     )
                     data_rows.append(output_row)
-                    print(output_row)
+                    if debug:
+                        print('\t' + output_row)
                     continue
 
                 is_fee_item = FEE_ITEM_PATTERN.match(line)
@@ -87,21 +101,21 @@ def parse_text(some_text_path):
                         is_fee_item.group(2),
                     )
                     data_rows.append(output_row)
-                    print(output_row)
+                    if debug:
+                        print('\t' + output_row)
     return data_rows
 
 
 def convert_pdfs(some_directory):
     for item in os.listdir(some_directory):
         if item.lower().endswith('.pdf'):
-            check_call([PDF_TO_TEXT_PATH] + PDF_TO_TEXT_ARGS + [os.path.join(some_directory, item)])
-    return
+            check_call([PDF_TO_TEXT_PATH] + PDF_TO_TEXT_ARGS +
+                       [os.path.join(some_directory, item)])
 
 
 def export_csv(output_name, some_data_text_rows):
     with open(output_name, 'w', newline='') as output_handle:
         output_handle.writelines('\n'.join(some_data_text_rows))
-    return
 
 
 # -- CLI Hook -- #
