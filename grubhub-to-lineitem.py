@@ -11,12 +11,14 @@ PDF_TO_TEXT_ARGS = ['-layout', '-table', '-nopgbrk', '-bom']
 EXTRA_WHITESPACE_PATTERN = re.compile(r'\s{2,}')
 DISALLOWED_CHARS_PATTERN = re.compile(r'["]')
 RESTAURANT_NAME_PATTERN = re.compile(
-    r'(Your order from (.+?) is +being +prepared|Thanks for your (.+?) order)'
+    r'\s*(Your (delivery |pickup )?order from (.+?) +is +being|\s*Thanks for your (.+?) order)'
 )
 DATE_PATTERN = re.compile(
-    r'Grubhub +<orders@eat.grubhub.com> +(Mon|Tue|Wed|Thu|Fri|Sat|Sun), ((Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec).+?) +at +\d'
+    # r'Grubhub\s+<orders@eat.grubhub.com>\s+(Mon|Tue|Wed|Thu|Fri|Sat|Sun),\s+((Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec).+?)\s+at\s+\d'
+    # r'^(\s*Date:\s+|\s+Ordered:\s+)(\d{1,2}\/\d{1,2}\/202\d|(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec).+?),'
+    r'^(\s+Ordered:\s+)((Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},\s+\d{4})'
 )
-LINE_ITEM_PATTERN = re.compile(r'\s*(\d)\s+([A-Za-z &\-*."\',()]+)\s+\$(\d+\.\d+)$')
+LINE_ITEM_PATTERN = re.compile(r'\s*(\d)\s+([A-Za-z0-9 &\-*."\'#,()]+)\s+\$(\d+\.\d+)$')
 FEE_ITEM_PATTERN = re.compile(
     r'(Delivery +fee|Sales +tax|Service +fee|Tip)\s+\$(\d+\.\d+)$'
 )
@@ -41,7 +43,7 @@ def main():
                     os.path.join(source_dir, thing)))
 
         if all_data_rows:
-            output_csv = source_dir + '.csv'
+            output_csv = source_dir + '-gh.csv'
             print('-- Exporting to CSV "{}"'.format(output_csv))
             export_csv(
                 output_csv,
@@ -64,6 +66,7 @@ def parse_text(some_text_path):
         restaurant_name = None
         order_date = None
         for line in txtfile.readlines():
+            # print('checking >' + line)
             output_row = ''
             if not restaurant_name:
                 is_rname = RESTAURANT_NAME_PATTERN.match(line)
@@ -75,6 +78,7 @@ def parse_text(some_text_path):
             if not order_date:
                 is_date = DATE_PATTERN.match(line)
                 if is_date:
+                    print('\t found date >{}< in line >>{}<<'.format(is_date.group(2), line))
                     order_date = is_date.group(2)
 
             if '$' in line:

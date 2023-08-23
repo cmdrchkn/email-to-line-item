@@ -13,9 +13,10 @@ DISALLOWED_CHARS_PATTERN = re.compile(r'["]')
 DATE_PATTERN = re.compile(
     r'\s*Shipped\s+on\s+((Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec).+)'
 )
-LINE_ITEM_PATTERN = re.compile(r'(\S.+)\$(\d+\.\d+)$')
+# LINE_ITEM_PATTERN = re.compile(r'^\s*(\S.+)\$(\d+\.\d+)$')
+LINE_ITEM_PATTERN = re.compile(r'^\s*(\d) of: (\S.+)\$(\d+\.\d+)$')
 FEE_ITEM_PATTERN = re.compile(
-    r'.*(Shipping & Handling|Bottle Deposit Fee|Estimated tax to be collected|Tip \(optional\)):?\s+\$?(\d+\.\d+)$'
+    r'.*(Shipping & Handling|Bottle Deposit Fee|Estimated tax to be collected|Tip \(optional\)):?\s+\$?(\d+\.\d{2})'
 )
 
 
@@ -37,7 +38,7 @@ def main():
                     os.path.join(source_dir, thing)))
 
         if all_data_rows:
-            output_csv = source_dir + '.csv'
+            output_csv = source_dir + '-amzn.csv'
             print('-- Exporting to CSV "{}"'.format(output_csv))
             export_csv(
                 output_csv,
@@ -80,32 +81,36 @@ def parse_text(some_text_path):
             if '$' in line:
                 if line_item_section:
                     is_line_item = LINE_ITEM_PATTERN.match(line)
+                    #(quantity)(item name)(price)
                     if is_line_item:
-                        output_row = '"{}","{}","Groceries","{}","${}","Mike"'.format(
+                        output_row = '"{}","{} of: {}","Groceries","{}","${}","Mike"'.format(
                             clean_text(restaurant_name),
                             clean_text(is_line_item.group(1)),
+                            clean_text(is_line_item.group(2)),
                             order_date,
-                            is_line_item.group(2),
+                            float(is_line_item.group(3)) * int(is_line_item.group(1)),
                         )
                         data_rows.append(output_row)
                         if debug:
                             print('\t' + output_row)
                         continue
                 
-                if fee_item_section:
-                    is_fee_item = FEE_ITEM_PATTERN.match(line)
-                    if is_fee_item:
-                        output_row = '"{}","{}","Groceries","{}","${}","Mike"'.format(
-                            clean_text(restaurant_name),
-                            clean_text(is_fee_item.group(1)),
-                            order_date,
-                            is_fee_item.group(2),
-                        )
-                        data_rows.append(output_row)
-                        if debug:
-                            print('\t' + output_row)
-                    # elif debug:
-                    #     print('\t- Not a fee: """{}"""'.format(line))
+            if fee_item_section:
+                is_fee_item = FEE_ITEM_PATTERN.match(line)
+                # if 'Tip' in clean_text(line):
+                #     print(line)
+                if is_fee_item:
+                    output_row = '"{}","{}","Groceries","{}","${}","Mike"'.format(
+                        clean_text(restaurant_name),
+                        clean_text(is_fee_item.group(1)),
+                        order_date,
+                        is_fee_item.group(2),
+                    )
+                    data_rows.append(output_row)
+                    if debug:
+                        print('\t' + output_row)
+                # elif debug:
+                #     print('\t- Not a fee: """{}"""'.format(line))
             
             if 'Shipping Address' in line:
                 fee_item_section = True
